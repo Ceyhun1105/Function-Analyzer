@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function Analyzer 📈</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+        }
+        h1 {
+            color: #0d6efd;
+            margin-bottom: 0.5rem;
+        }
+        p {
+            color: #606770;
+            margin-bottom: 1.5rem;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        #function-input {
+            flex-grow: 1;
+            padding: 12px 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #dddfe2;
+            transition: border-color 0.2s;
+        }
+        #function-input:focus {
+            outline: none;
+            border-color: #0d6efd;
+        }
+        #analyze-btn {
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #0d6efd;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #analyze-btn:hover {
+            background-color: #0b5ed7;
+        }
+        #analyze-btn:disabled {
+            background-color: #a0a0a0;
+            cursor: not-allowed;
+        }
+        #results {
+            margin-top: 2rem;
+            text-align: center;
+        }
+        #result-text {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            min-height: 30px;
+        }
+        #plot-image {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #0d6efd;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none; /* Initially hidden */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Interactive Function Analyzer 📈</h1>
+        <p>Enter a function using 'x' as the variable and see its classification and plots!</p>
+        <small>Examples: <code>sin(2*pi*x)</code>, <code>sign(x)</code>, <code>abs(x % 1 - 0.5)</code></small>
+        
+        <div class="input-group" style="margin-top: 1.5rem;">
+            <input type="text" id="function-input" placeholder="e.g., sin(5*x) + cos(3*x)">
+            <button id="analyze-btn">Analyze</button>
+        </div>
+
+        <div id="results">
+            <div id="result-text"></div>
+            <div class="loader" id="loader"></div>
+            <img id="plot-image" src="" alt="Function Plot">
+        </div>
+    </div>
+
+    <script>
+        const functionInput = document.getElementById('function-input');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const resultText = document.getElementById('result-text');
+        const plotImage = document.getElementById('plot-image');
+        const loader = document.getElementById('loader');
+
+        async function analyzeFunction() {
+            const funcStr = functionInput.value;
+            if (!funcStr) {
+                resultText.innerHTML = '<span style="color: red;">Please enter a function.</span>';
+                return;
+            }
+
+            // Show loader and disable button
+            loader.style.display = 'block';
+            analyzeBtn.disabled = true;
+            resultText.innerHTML = '';
+            plotImage.src = '';
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ function_string: funcStr }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultText.innerHTML = data.result_text || '';
+                    if (data.plot_image) {
+                        plotImage.src = 'data:image/png;base64,' + data.plot_image;
+                    } else {
+                        plotImage.src = '';
+                    }
+                } else {
+                    throw new Error(data.error || 'An unknown error occurred.');
+                }
+
+            } catch (error) {
+                resultText.innerHTML = `<span style="color: red;">Error: ${error.message}</span>`;
+                plotImage.src = '';
+            } finally {
+                // Hide loader and enable button
+                loader.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        analyzeBtn.addEventListener('click', analyzeFunction);
+        
+        // Allow pressing Enter to trigger the analysis
+        functionInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                analyzeFunction();
+            }
+        });
+
+    </script>
+</body>
+</html>
